@@ -1,0 +1,9 @@
+[deps]
+numpyro = ""
+arviz = ""
+jax = ""
+jaxlib = ""
+BayesInference = ""
+
+[pip]
+BayesInference = "0.0.30"
