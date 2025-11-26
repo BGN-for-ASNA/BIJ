@@ -1,26 +1,116 @@
-# BayesianInference.jl
+# Bayesian Inference for Julia
 
-A Julia wrapper for the [BayesInference (BI)](https://github.com/your-bi-repo) Python library, providing seamless Bayesian inference capabilities in Julia with JAX-based backends.
+<div align="center">
 
-## Features
+**A Julia wrapper for the unified probabilistic programming library, bringing JAX-powered Bayesian inference to the Julia ecosystem.**  
+*Run bespoke models on CPU, GPU, or TPU with Julia's native syntax.*
 
-- 🚀 **Seamless Python-Julia Integration**: Call Python's BayesInference library directly from Julia with native syntax
-- 🔧 **JAX Backend Support**: Leverage JAX and NumPyro for high-performance Bayesian inference
-- 📊 **Matplotlib Integration**: Display plots directly in Julia with the `@pyplot` macro
-- 🎯 **Model Definition Macro**: Use `@BI` to define Bayesian models with proper Python interoperability
-- 🔢 **Array Interoperability**: Automatic conversion between Julia and JAX arrays
+[![License: GPL (>= 3)](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Julia](https://img.shields.io/badge/Julia-1.12+-9558B2?logo=julia)](https://julialang.org/)
 
-## Installation
+</div>
 
-### From Julia Registry (after registration)
+---
 
+## One Mental Model. Three Languages.
+
+**BayesianInference (BI)** provides a unified experience across R, Python, and Julia. Whether you work in R's formula syntax, Python's object-oriented approach, or Julia's mathematical elegance, the model logic remains consistent.
+
+-   ✅ **Zero Context Switching**: Variable names, distribution signatures, and model logic remain consistent across all implementations.
+-   ✅ **NumPyro Power**: All interfaces compile down to XLA via JAX for blazing fast inference.
+-   ✅ **Rich Diagnostics**: Seamless integration with ArviZ for posterior analysis.
+
+### Compare the Syntax
+
+<table width="100%">
+<tr>
+<th width="33%">Julia Syntax</th>
+<th width="33%">Python Syntax</th>
+<th width="33%">R Syntax</th>
+</tr>
+<tr>
+<td valign="top">
+
+```julia
+@BI function model(; weight, height)
+    # Priors
+    sigma = m.dist.uniform(0, 50, name="sigma")
+    alpha = m.dist.normal(178, 20, name="alpha")
+    beta  = m.dist.normal(0, 1, name="beta")
+
+    # Likelihood
+    mu = alpha + beta * weight
+    m.dist.normal(mu, sigma, obs=height)
+end
+```
+
+</td>
+<td valign="top">
+
+```python
+def model(height, weight):
+    # Priors
+    sigma = bi.dist.uniform(0, 50, name='sigma', shape=(1,))
+    alpha = bi.dist.normal(178, 20, name='alpha', shape=(1,))
+    beta  = bi.dist.normal(0, 1, name='beta', shape=(1,))
+
+    # Likelihood
+    mu = alpha + beta * weight
+    bi.dist.normal(mu, sigma, obs=height)
+```
+
+</td>
+<td valign="top">
+
+
+```r
+model <- function(height, weight){
+  # Priors
+  sigma = bi.dist.uniform(0, 50, name='sigma', shape=c(1))
+  alpha = bi.dist.normal(178, 20, name='alpha', shape=c(1))
+  beta  = bi.dist.normal(0, 1, name='beta', shape=c(1))
+
+  # Likelihood
+  mu = alpha + beta * weight
+  bi.dist.normal(mu, sigma, obs=height)
+}
+```
+
+</td>
+</tr>
+</table>
+
+---
+
+## Built for Speed
+
+Leveraging Just-In-Time (JIT) compilation via JAX, BI outperforms traditional engines on standard hardware and unlocks massive scalability on GPU clusters for large datasets.
+
+**Benchmark: Network Size 100 (Lower is Better)**
+
+| Engine | Execution Time | Relative Performance |
+| :--- | :--- | :--- |
+| **STAN (CPU)** | `████████████████████████████` | *Baseline* |
+| **BI (CPU)** | `████████████` | **~2.5x Faster** |
+
+*> Comparison of execution time for a Social Relations Model. Source: Sosa et al. (2025).*
+
+---
+
+## Installation & Setup
+
+### 1. Install Julia
+Download and install [Julia 1.12 or later](https://julialang.org/downloads/)
+
+### 2. Install Package
+
+#### From Julia Registry (after registration)
 ```julia
 using Pkg
 Pkg.add("BayesianInference")
 ```
 
-### Development Installation
-
+#### Development Installation
 ```julia
 using Pkg
 Pkg.add(url="https://github.com/BGN-for-ASNA/BIJ")
@@ -41,11 +131,32 @@ Pkg.instantiate()
 using BayesianInference
 ```
 
+### 3. Initialize Environment
+The package automatically manages Python dependencies via CondaPkg. On first use:
+
+```julia
+using BayesianInference
+# Python dependencies are installed automatically
+m = importBI()  # This will set up the environment on first run
+```
+
+### 4. Select Backend
+Choose `"cpu"`, `"gpu"`, or `"tpu"` when importing the library.
+
+```julia
+# Initialize on CPU (default)
+m = importBI(platform="cpu")
+
+# Or on GPU (requires JAX GPU installation)
+m = importBI(platform="gpu")
+```
+
+---
+
 ## Quick Start
 
 ```julia
 using BayesianInference
-using PythonCall
 
 # Initialize BI
 m = importBI()
@@ -76,65 +187,94 @@ m.summary()
 end
 ```
 
-## Key Components
+---
 
-### `importBI()`
-Initialize the BayesInference Python module with configurable options:
+## Features
 
-```julia
-m = importBI(
-    platform="cpu",        # or "gpu", "tpu"
-    cores=nothing,         # number of CPU cores
-    rand_seed=true,        # set random seed
-    backend="numpyro"      # backend to use
-)
-```
+### Julia-Specific Features
+-   **`@BI` Macro**: Define models with proper Python interoperability
+-   **`@pyplot` Macro**: Display matplotlib plots directly in Julia
+-   **JAX Integration**: Direct access to JAX's NumPy API (`jnp` and `jax` constants)
+-   **Automatic Array Conversion**: Seamless conversion between Julia and JAX arrays
 
-### `@BI` Macro
-Define Bayesian models that are compatible with Python's inspection requirements:
+### Data Manipulation
+-   One-hot encoding
+-   Index variable conversion
+-   Scaling and normalization
 
-```julia
-@BI function my_model(data, params)
-    # Your model definition
-end
-```
+### Modeling (via NumPyro)
+-   **Linear & Generalized Linear Models**: Regression, Binomial, Poisson, Negative Binomial, etc.
+-   **Hierarchical/Multilevel Models**: Varying intercepts and slopes.
+-   **Time Series & Processes**: Gaussian Processes, Gaussian Random Walks, State Space Models.
+-   **Mixture Models**: GMM, Dirichlet Process Mixtures.
+-   **Network Models**: Network-based diffusion, Block models.
+-   **Bayesian Neural Networks (BNN)**.
 
-### `@pyplot` Macro
-Execute matplotlib plotting commands and display results in Julia:
+### Diagnostics (via ArviZ)
+-   Posterior summary statistics and plots.
+-   Trace plots, Density plots, Autocorrelation.
+-   WAIC and LOO (ELPD) model comparison.
+-   R-hat and Effective Sample Size (ESS).
 
-```julia
-@pyplot begin
-    plt.plot(x, y)
-    plt.title("My Plot")
-end
-```
+---
 
-### JAX Integration
-Use JAX's NumPy API directly:
+## Available Distributions
 
-```julia
-# jnp and jax are available as global constants
-arr = jnp.array([1, 2, 3, 4, 5])
-result = jnp.sum(arr)
-```
+The package provides wrappers for a comprehensive set of distributions from NumPyro.
 
-## Dependencies
+### Continuous
+-   `m.dist.normal`, `m.dist.uniform`, `m.dist.student_t`
+-   `m.dist.cauchy`, `m.dist.halfcauchy`, `m.dist.halfnormal`
+-   `m.dist.gamma`, `m.dist.inverse_gamma`, `m.dist.exponential`
+-   `m.dist.beta`, `m.dist.beta_proportion`
+-   `m.dist.laplace`, `m.dist.asymmetric_laplace`
+-   `m.dist.log_normal`, `m.dist.log_uniform`
+-   `m.dist.pareto`, `m.dist.weibull`, `m.dist.gumbel`
+-   `m.dist.chi2`, `m.dist.gompertz`
 
-- **Julia**: ≥ 1.12
-- **PythonCall.jl**: For Python interoperability
-- **CondaPkg.jl**: Automatic Python environment management
+### Discrete
+-   `m.dist.bernoulli`, `m.dist.binomial`
+-   `m.dist.poisson`, `m.dist.negative_binomial`
+-   `m.dist.geometric`, `m.dist.discrete_uniform`
+-   `m.dist.beta_binomial`, `m.dist.zero_inflated_poisson`
 
-Python dependencies (installed automatically via CondaPkg):
-- BayesInference
-- JAX
-- NumPyro
-- Matplotlib
+### Multivariate
+-   `m.dist.multivariate_normal`, `m.dist.multivariate_student_t`
+-   `m.dist.dirichlet`, `m.dist.dirichlet_multinomial`
+-   `m.dist.multinomial`
+-   `m.dist.lkj`, `m.dist.lkj_cholesky`
+-   `m.dist.wishart`, `m.dist.wishart_cholesky`
+
+### Time Series & Stochastic Processes
+-   `m.dist.gaussian_random_walk`
+-   `m.dist.gaussian_state_space`
+-   `m.dist.euler_maruyama`
+-   `m.dist.car` (Conditional AutoRegressive)
+
+### Mixtures & Truncated
+-   `m.dist.mixture`, `m.dist.mixture_same_family`
+-   `m.dist.truncated_normal`, `m.dist.truncated_cauchy`
+-   `m.dist.lower_truncated_power_law`
+
+*(See package documentation for the full list)*
+
+---
 
 ## Documentation
 
-For detailed usage examples, see:
-- [QUICKSTART.md](QUICKSTART.md) - Quick start guide
-- [test/usage_example.ipynb](test/usage_example.ipynb) - Jupyter notebook examples
+For full documentation and examples:
+
+```julia
+# See the Quick Start guide
+# QUICKSTART.md
+
+# Explore example notebooks
+# test/usage_example.ipynb
+```
+
+For help with specific functions in the underlying BI library, refer to the [BayesianInference documentation](https://github.com/BGN-for-ASNA/BIR).
+
+---
 
 ## Platform Support
 
@@ -144,25 +284,23 @@ For detailed usage examples, see:
 
 GPU support available on compatible systems with JAX GPU installation.
 
-## License
-
-This package is licensed under the [GNU General Public License v3.0](LICENSE).
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Citation
-
-If you use this package in your research, please cite the underlying BayesInference library.
+---
 
 ## Related Packages
 
+- [BIR](https://github.com/BGN-for-ASNA/BIR) - R implementation
 - [PythonCall.jl](https://github.com/cjdoris/PythonCall.jl) - Python interoperability
 - [Turing.jl](https://github.com/TuringLang/Turing.jl) - Native Julia Bayesian inference
 
-## Support
+---
 
-For issues and questions:
-- Open an issue on [GitHub](https://github.com/BGN-for-ASNA/BIJ/issues)
-- See the [QUICKSTART.md](QUICKSTART.md) for troubleshooting tips
+<div align="center">
+
+**BayesianInference.jl (BIJ)**  
+Based on "The Bayesian Inference library for Python and R" by Sosa, McElreath, & Ross (2025).
+
+[GitHub](https://github.com/BGN-for-ASNA/BIJ) | [Issues](https://github.com/BGN-for-ASNA/BIJ/issues) | [Quick Start](QUICKSTART.md)
+
+&copy; 2025 BayesianInference Team. Released under GPL-3.0.
+
+</div>
