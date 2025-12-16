@@ -140,6 +140,19 @@ for op in (:(==), :(!=), :(<), :(<=), :(>), :(>=), :isless)
     end
 end
 
+# 5. Iteration & Length
+function Base.iterate(x::BIObject, state...)
+    res = iterate(x.py, state...)
+    if res === nothing
+        return nothing
+    else
+        val, new_state = res
+        return (val isa Py ? BIObject(val) : val, new_state)
+    end
+end
+
+Base.length(x::BIObject) = length(x.py)
+
 
 """
     importBI(; platform="cpu", cores=nothing, rand_seed=true, deallocate=false, print_devices_found=true, backend="numpyro")
@@ -345,12 +358,15 @@ macro pyplot(ex)
     end
 end
 
-# Global Constants for jax.numpy
-# 1. Define a global constant for jnp
+# Global Constants for jax.numpy and Python builtins
+# 1. Define global constants
 const jnp = BIObject(PythonCall.pynew())
 const jax = BIObject(PythonCall.pynew())
+const pybuiltins = PythonCall.pybuiltins
+const pydict = PythonCall.pydict
+const pylist = PythonCall.pylist
 
-# 2. Initialize it when the module loads
+# 2. Initialize JAX modules when the module loads
 function __init__()
     PythonCall.pycopy!(jnp.py, pyimport("jax.numpy"))
     PythonCall.pycopy!(jax.py, pyimport("jax"))
